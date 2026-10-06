@@ -5,6 +5,8 @@ import '../screens/auth/login_screen.dart';
 import '../screens/auth/otp_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/auth/welcome_screen.dart';
+import '../screens/expenses/add_expense_screen.dart';
+import '../screens/expenses/expenses_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/jars/create_jar_screen.dart';
 import '../screens/jars/edit_jar_screen.dart';
@@ -96,6 +98,23 @@ class AppRoutes {
       case deposit:
         return MaterialPageRoute(
           builder: (_) => const DepositScreen(),
+        );
+
+      case expenses:
+        return MaterialPageRoute(
+          builder: (_) => const ExpensesScreen(),
+          settings: settings,
+        );
+
+      case addExpense:
+        final expense = settings.arguments;
+        return MaterialPageRoute(
+          builder: (_) => AddExpenseScreen(
+            expense: expense is ExpenseRecord
+                ? expense
+                : null,
+          ),
+          settings: settings,
         );
 
       case transactionSuccess:

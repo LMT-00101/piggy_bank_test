@@ -1,62 +1,37 @@
 import 'package:flutter/material.dart';
 
 import '../../routes/app_routes.dart';
+import 'expense_record.dart';
 
-class ExpenseRecord {
-  final String id;
-  final String category;
-  final String note;
-  final double amount;
-  final String date;
-  final String jarName;
-
-  const ExpenseRecord({
-    required this.id,
-    required this.category,
-    required this.note,
-    required this.amount,
-    required this.date,
-    required this.jarName,
-  });
-}
-
-final List<ExpenseRecord> demoExpenses = [
-  const ExpenseRecord(
-    id: 'expense_1',
-    category: 'Ăn uống',
-    note: 'Bữa trưa',
-    amount: 150000,
-    date: 'Hôm nay',
-    jarName: 'Chi tiêu hàng ngày',
-  ),
-  const ExpenseRecord(
-    id: 'expense_2',
-    category: 'Mua sắm',
-    note: 'WinMart',
-    amount: 450000,
-    date: 'Hôm qua',
-    jarName: 'Chi tiêu hàng ngày',
-  ),
-  const ExpenseRecord(
-    id: 'expense_3',
-    category: 'Giải trí',
-    note: 'Xem phim',
-    amount: 180000,
-    date: '20/09/2026',
-    jarName: 'Giải trí',
-  ),
-];
+export 'expense_record.dart';
 
 class ExpensesScreen extends StatefulWidget {
   const ExpensesScreen({super.key});
 
   @override
-  State<ExpensesScreen> createState() =>
-      _ExpensesScreenState();
+  State<ExpensesScreen> createState() => _ExpensesScreenState();
 }
 
 class _ExpensesScreenState extends State<ExpensesScreen> {
   String selectedCategory = 'Tất cả';
+
+  @override
+  void initState() {
+    super.initState();
+    expenseRecords.addListener(_onExpensesChanged);
+  }
+
+  @override
+  void dispose() {
+    expenseRecords.removeListener(_onExpensesChanged);
+    super.dispose();
+  }
+
+  void _onExpensesChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   final categories = const [
     'Tất cả',
@@ -68,39 +43,60 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   ];
 
   String formatMoney(double amount) {
-    return '${amount.toStringAsFixed(0).replaceAllMapped(
-          RegExp(r'\B(?=(\d{3})+(?!\d))'),
-          (match) => '.',
-        )} đ';
+    return '${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => '.')} đ';
   }
 
   List<ExpenseRecord> get filteredExpenses {
+    final expenses = expenseRecords.value;
     if (selectedCategory == 'Tất cả') {
-      return demoExpenses;
+      return expenses;
     }
 
-    return demoExpenses
-        .where(
-          (expense) =>
-              expense.category == selectedCategory,
-        )
+    return expenses
+        .where((expense) => expense.category == selectedCategory)
         .toList();
   }
 
   double get totalExpense {
-    return filteredExpenses.fold(
-      0,
-      (sum, expense) => sum + expense.amount,
-    );
+    return filteredExpenses.fold(0, (sum, expense) => sum + expense.amount);
   }
 
-  Future<void> _openAddExpense() async {
-    await Navigator.pushNamed(
-      context,
-      AppRoutes.addExpense,
+  void _openAddExpense() {
+    Navigator.pushNamed(context, AppRoutes.addExpense);
+  }
+
+  void _openEditExpense(ExpenseRecord expense) {
+    Navigator.pushNamed(context, AppRoutes.addExpense, arguments: expense);
+  }
+
+  Future<void> _deleteExpense(ExpenseRecord expense) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Xóa khoản chi?'),
+          content: const Text('Khoản chi này sẽ bị xóa khỏi danh sách.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Xóa'),
+            ),
+          ],
+        );
+      },
     );
 
-    setState(() {});
+    if (shouldDelete != true) {
+      return;
+    }
+
+    expenseRecords.value = expenseRecords.value
+        .where((item) => item.id != expense.id)
+        .toList();
   }
 
   @override
@@ -112,14 +108,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           IconButton(
             tooltip: 'Quét OCR',
             onPressed: () {
-              Navigator.pushNamed(
-                context,
-                AppRoutes.ocrScan,
-              );
+              Navigator.pushNamed(context, AppRoutes.ocrScan);
             },
-            icon: const Icon(
-              Icons.camera_alt_outlined,
-            ),
+            icon: const Icon(Icons.camera_alt_outlined),
           ),
         ],
       ),
@@ -132,42 +123,31 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           Card(
-            color: Theme.of(context)
-                .colorScheme
-                .primaryContainer,
+            color: Theme.of(context).colorScheme.primaryContainer,
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 26,
-                    backgroundColor:
-                        Theme.of(context)
-                            .colorScheme
-                            .primary,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     child: Icon(
                       Icons.payments_outlined,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onPrimary,
+                      color: Theme.of(context).colorScheme.onPrimary,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Tổng chi tiêu',
-                        ),
+                        const Text('Tổng chi tiêu'),
                         const SizedBox(height: 4),
                         Text(
                           formatMoney(totalExpense),
                           style: const TextStyle(
                             fontSize: 24,
-                            fontWeight:
-                                FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
@@ -182,10 +162,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
           const Text(
             'Danh mục',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
 
           const SizedBox(height: 8),
@@ -195,20 +172,16 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: categories.length,
-              separatorBuilder: (_, _) =>
-                  const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
-                final category =
-                    categories[index];
+                final category = categories[index];
 
                 return ChoiceChip(
                   label: Text(category),
-                  selected:
-                      selectedCategory == category,
+                  selected: selectedCategory == category,
                   onSelected: (_) {
                     setState(() {
-                      selectedCategory =
-                          category;
+                      selectedCategory = category;
                     });
                   },
                 );
@@ -219,22 +192,16 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           const SizedBox(height: 20),
 
           Row(
-            mainAxisAlignment:
-                MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
                 'Khoản chi gần đây',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               Text(
                 '${filteredExpenses.length} khoản',
                 style: TextStyle(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -246,11 +213,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(24),
-                child: Center(
-                  child: Text(
-                    'Chưa có khoản chi nào.',
-                  ),
-                ),
+                child: Center(child: Text('Chưa có khoản chi nào.')),
               ),
             ),
 
@@ -265,53 +228,56 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   builder: (sheetContext) {
                     return SafeArea(
                       child: Padding(
-                        padding:
-                            const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(24),
                         child: Column(
-                          mainAxisSize:
-                              MainAxisSize.min,
-                          crossAxisAlignment:
-                              CrossAxisAlignment
-                                  .start,
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               expense.category,
                               style: const TextStyle(
                                 fontSize: 20,
-                                fontWeight:
-                                    FontWeight.bold,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(
-                              height: 12,
-                            ),
-                            Text(
-                              'Số tiền: ${formatMoney(expense.amount)}',
-                            ),
-                            Text(
-                              'Hũ: ${expense.jarName}',
-                            ),
-                            Text(
-                              'Ngày: ${expense.date}',
-                            ),
+                            const SizedBox(height: 12),
+                            Text('Số tiền: ${formatMoney(expense.amount)}'),
+                            Text('Hũ: ${expense.jarName}'),
+                            Text('Ngày: ${expense.date}'),
                             Text(
                               'Ghi chú: ${expense.note.isEmpty ? 'Không có' : expense.note}',
                             ),
-                            const SizedBox(
-                              height: 20,
+                            const SizedBox(height: 20),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () {
+                                      Navigator.pop(sheetContext);
+                                      _openEditExpense(expense);
+                                    },
+                                    child: const Text('Sửa'),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () async {
+                                      Navigator.pop(sheetContext);
+                                      await _deleteExpense(expense);
+                                    },
+                                    child: const Text('Xóa'),
+                                  ),
+                                ),
+                              ],
                             ),
                             SizedBox(
                               width: double.infinity,
-                              child:
-                                  OutlinedButton(
+                              child: TextButton(
                                 onPressed: () {
-                                  Navigator.pop(
-                                    sheetContext,
-                                  );
+                                  Navigator.pop(sheetContext);
                                 },
-                                child: const Text(
-                                  'Đóng',
-                                ),
+                                child: const Text('Đóng'),
                               ),
                             ),
                           ],
@@ -359,8 +325,7 @@ class _ExpenseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme =
-        Theme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -368,26 +333,16 @@ class _ExpenseCard extends StatelessWidget {
         onTap: onTap,
         leading: CircleAvatar(
           backgroundColor: scheme.errorContainer,
-          child: Icon(
-            icon,
-            color: scheme.error,
-          ),
+          child: Icon(icon, color: scheme.error),
         ),
         title: Text(
           expense.category,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: Text(
-          '${expense.note} • ${expense.date}',
-        ),
+        subtitle: Text('${expense.note} • ${expense.date}'),
         trailing: Text(
           '-${formatMoney(expense.amount)}',
-          style: TextStyle(
-            color: scheme.error,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: scheme.error, fontWeight: FontWeight.bold),
         ),
       ),
     );

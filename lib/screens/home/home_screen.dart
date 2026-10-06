@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../data/app_store.dart';
 import '../../routes/app_routes.dart';
+import '../expenses/expense_record.dart';
 import '../transactions/withdraw_screen.dart';
-import '../expenses/add_expense_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -89,6 +89,7 @@ class HomeScreen extends StatelessWidget {
 
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _QuickAction(
                 icon: Icons.add,
@@ -115,14 +116,11 @@ class HomeScreen extends StatelessWidget {
               ),
               _QuickAction(
                 icon: Icons.receipt_long,
-                label: 'Thêm chi',
+                label: 'Thêm khoản chi',
                 onTap: () {
-                  Navigator.push(
+                  Navigator.pushNamed(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const AddExpenseScreen(),
-                    ),
+                    AppRoutes.addExpense,
                   );
                 },
               ),
@@ -209,25 +207,27 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
 
-          const _ExpensePreview(
-            category: 'Ăn uống',
-            note: 'Bữa trưa',
-            amount: '-150.000 đ',
-            date: 'Hôm nay',
-          ),
+          ValueListenableBuilder<List<ExpenseRecord>>(
+            valueListenable: expenseRecords,
+            builder: (context, expenses, _) {
+              if (expenses.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Text('Chưa có khoản chi nào.'),
+                );
+              }
 
-          const _ExpensePreview(
-            category: 'Mua sắm',
-            note: 'WinMart',
-            amount: '-450.000 đ',
-            date: 'Hôm qua',
-          ),
-
-          const _ExpensePreview(
-            category: 'Giải trí',
-            note: 'Xem phim',
-            amount: '-180.000 đ',
-            date: '20/09/2026',
+              return Column(
+                children: expenses.take(3).map((expense) {
+                  return _ExpensePreview(
+                    category: expense.category,
+                    note: expense.note,
+                    amount: '-${formatMoney(expense.amount)}',
+                    date: expense.date,
+                  );
+                }).toList(),
+              );
+            },
           ),
 
           const SizedBox(height: 24),

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../../routes/app_routes.dart';
-import 'expenses_screen.dart';
+import 'expense_record.dart';
 
 class AddExpenseScreen extends StatefulWidget {
-  const AddExpenseScreen({super.key});
+  final ExpenseRecord? expense;
+
+  const AddExpenseScreen({
+    super.key,
+    this.expense,
+  });
 
   @override
   State<AddExpenseScreen> createState() =>
@@ -18,6 +22,19 @@ class _AddExpenseScreenState
 
   String category = 'Ăn uống';
   String selectedJar = 'Chi tiêu hàng ngày';
+
+  @override
+  void initState() {
+    super.initState();
+    final expense = widget.expense;
+    if (expense != null) {
+      amountController.text =
+          expense.amount.toStringAsFixed(0);
+      noteController.text = expense.note;
+      category = expense.category;
+      selectedJar = expense.jarName;
+    }
+  }
 
   final categories = const [
     'Ăn uống',
@@ -68,13 +85,14 @@ class _AddExpenseScreenState
       return;
     }
 
-    _addExpense(amount);
+    _saveExpenseRecord(amount);
   }
 
-  void _addExpense(double amount) {
-    demoExpenses.insert(
-      0,
-      ExpenseRecord(
+  void _saveExpenseRecord(double amount) {
+    final expense = widget.expense;
+    if (expense == null) {
+      expenseRecords.value = [
+        ExpenseRecord(
         id: DateTime.now()
             .millisecondsSinceEpoch
             .toString(),
@@ -83,16 +101,25 @@ class _AddExpenseScreenState
         amount: amount,
         date: 'Hôm nay',
         jarName: selectedJar,
-      ),
-    );
+        ),
+        ...expenseRecords.value,
+      ];
+    } else {
+      expenseRecords.value = expenseRecords.value
+          .map(
+            (item) => item.id == expense.id
+                ? item.copyWith(
+                    category: category,
+                    note: noteController.text.trim(),
+                    amount: amount,
+                    jarName: selectedJar,
+                  )
+                : item,
+          )
+          .toList();
+    }
 
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      AppRoutes.expenses,
-      (route) =>
-          route.settings.name == AppRoutes.home ||
-          route.settings.name == AppRoutes.expenses,
-    );
+    Navigator.pop(context, true);
   }
 
   void _showLimitWarning(double amount) {
@@ -116,7 +143,7 @@ class _AddExpenseScreenState
             FilledButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
-                _addExpense(amount);
+                _saveExpenseRecord(amount);
               },
               child: const Text(
                 'Vẫn ghi nhận',
@@ -132,7 +159,11 @@ class _AddExpenseScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Thêm khoản chi'),
+        title: Text(
+          widget.expense == null
+              ? 'Thêm khoản chi'
+              : 'Sửa khoản chi',
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(24),
@@ -239,7 +270,7 @@ class _AddExpenseScreenState
             child: FilledButton(
               onPressed: _saveExpense,
               child: const Text(
-                'Lưu chi tiêu',
+                'Lưu khoản chi',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
